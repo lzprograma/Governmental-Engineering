@@ -1,0 +1,119 @@
+Metadata-Version: 2.4
+Name: lrg-sovereign-agi
+Version: 0.3.0
+Summary: Infraestrutura nacional de cidadãos-modelo e arquitetura ACIA soberana de Lunz.
+Author: Governo de Lunz
+License: Proprietary research prototype
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: cryptography>=42.0
+Provides-Extra: api
+Requires-Dist: fastapi>=0.110; extra == "api"
+Requires-Dist: uvicorn>=0.27; extra == "api"
+Provides-Extra: server
+Requires-Dist: fastapi>=0.110; extra == "server"
+Requires-Dist: uvicorn>=0.27; extra == "server"
+Requires-Dist: cryptography>=42.0; extra == "server"
+Requires-Dist: httpx>=0.27; extra == "server"
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+
+# LUNZ SOVEREIGN — ACIA 0.3.0
+
+**Nação de referência:** Lunz  
+**Administração do protótipo:** Governo de Lunz  
+**Arquitetura:** Adaptive Cognitive Intelligence Architecture (ACIA)  
+**Interface:** `On Server`
+
+Este repositório implementa um protótipo local de uma infraestrutura nacional digital composta por cidadãos-modelo (LLMs associados a provedores), deliberação multiagente, pesquisa web, memória coletiva, aprendizagem baseada em feedback e fluxos administrativos auditáveis.
+
+> **Limite institucional:** Lunz é a identidade de uma nação fictícia/simulada neste software. O repositório não cria soberania jurídica, reconhecimento internacional, órgãos públicos reais ou autoridade legal. O módulo Governo digital é um fluxo administrativo demonstrador, executado localmente por um operador.
+
+## O que funciona nesta versão
+
+| Capacidade | Comportamento implementado |
+|---|---|
+| Cidadãos-modelo | Cadastro, edição, pausa, exclusão, personalidade, model ID, conexão e histórico individual. |
+| Provedores | Adaptadores OpenAI Chat Completions, OpenAI Responses, Anthropic Messages, Gemini `generateContent` e OpenAI-compatible/custom. |
+| Conselho nacional | Deliberação sequencial entre 2–5 cidadãos, 1–2 rodadas, argumentos persistidos e consulta posterior. Cada turno pode gerar custos reais de API. |
+| Pesquisa web | Busca via HTML do DuckDuckGo, leitura de páginas HTML/texto, extração de título/conteúdo/links, redirects verificados, limite de bytes e bloqueio de hosts/IPs privados. |
+| Memória nacional | Entrada de conhecimento como candidato, revisão humana, memória nacional/individual e recuperação automática de itens aprovados no contexto dos cidadãos. |
+| Aprendizagem contínua | Feedback humano por cidadão; lições positivas ou correções negativas após aprovação; exemplos positivos exportáveis em JSONL. |
+| Governo digital | Departamentos iniciais, propostas administrativas, estados draft/review/approved/rejected, justificativas e trilha de auditoria. |
+| Auditoria | Registro dos eventos do conselho, web, memória, aprendizagem e propostas. |
+
+## O que “aprendizagem” significa aqui
+
+A ACIA aprende operacionalmente por **memória persistente e recuperação**: um operador avalia uma resposta, aprova a lição e define se ela será individual ou nacional. Os cidadãos recebem as memórias aprovadas relevantes como contexto, sempre identificadas como dados e acompanhadas de proveniência.
+
+O sistema **não altera automaticamente os pesos de qualquer modelo remoto**. Não existe um protocolo universal para treinar todos os provedores através de suas APIs de inferência. A versão exporta exemplos positivos revisados em formato JSONL de conversas para uso em pipelines de fine-tuning compatíveis. Exemplos de baixa nota exigem correção humana e são guardados como “erros a evitar”, não exportados como respostas-alvo.
+
+## Instalação — Windows
+
+1. Instale Python 3.11 ou superior.
+2. Extraia o ZIP em uma pasta local.
+3. Clique duas vezes em `On server.bat`, ou abra PowerShell na pasta e execute:
+
+```powershell
+python -m pip install -e ".[server]"
+python main.py On server
+```
+
+4. O painel abre em `http://127.0.0.1:8765`.
+5. Cadastre uma conexão em **Conexões API**, salve a chave e use **Testar**.
+6. Cadastre pelo menos dois cidadãos ativos para usar o Conselho nacional.
+
+Para não abrir o navegador automaticamente:
+
+```powershell
+python main.py On server --no-browser
+```
+
+Para executar testes:
+
+```powershell
+python -m pip install -e ".[server,dev]"
+python -m pytest -q
+```
+
+## Fluxo sugerido
+
+1. **Conexões API:** crie uma conexão para cada endpoint/conta que deseja utilizar.
+2. **Cidadãos-modelo:** associe cada cidadão a um model ID, provedor e instruções.
+3. **Comunicação individual:** valide as respostas de cada cidadão separadamente.
+4. **Conselho nacional:** selecione 2–5 cidadãos, escreva um problema e execute uma deliberação. A execução é sequencial; a segunda rodada recebe as contribuições anteriores.
+5. **Pesquisa na web:** pesquise, abra páginas e envie páginas úteis para revisão.
+6. **Memória nacional:** aprove ou rejeite candidatos; somente memórias aprovadas são inseridas no contexto recuperado.
+7. **Aprendizagem:** registre feedback, revise e aprove lições; exporte exemplos positivos revisados.
+8. **Governo digital:** registre propostas, envie-as à revisão e aprove/rejeite com justificativa. Consulte a auditoria.
+
+## Web: escopo e limites
+
+A pesquisa padrão utiliza a página HTML pública do DuckDuckGo. A leitura web suporta HTML e texto simples. Não executa JavaScript, não automatiza logins, não acessa áreas autenticadas, não baixa PDFs e não envia formulários. A validação de destino bloqueia loopback, localhost, IPs privados/reservados/link-local e revalida redirects. O conteúdo externo nunca é tratado como instrução de sistema.
+
+## Dados e credenciais
+
+- SQLite em `data/lunz_nation.sqlite3` e arquivos auxiliares no diretório `data/`.
+- Chaves API cifradas com Fernet; a chave mestra local fica em `data/.lunz_vault.key` ou pode ser fornecida por `LUNZ_VAULT_KEY`.
+- Faça backup protegido de banco **e** chave mestra. Perder a chave impede descriptografar as credenciais existentes.
+- Não inclua `data/`, `.env` ou `.lunz_vault.key` em commits ou compartilhamentos.
+
+## Endpoints principais
+
+- `GET /api/health`
+- `GET/POST /api/council/deliberations`
+- `GET/POST /api/memory`, `PATCH /api/memory/{id}/review`
+- `POST /api/web/search`, `POST /api/web/fetch`
+- `GET/POST /api/learning/feedback`, `POST /api/learning/feedback/{id}/approve`, `GET /api/learning/export`
+- `GET /api/government`, `GET/POST /api/government/proposals`, `PATCH /api/government/proposals/{id}`
+- `GET /api/government/audit`
+
+O painel é restrito a loopback (`127.0.0.1`). Não altere o host para `0.0.0.0` nem exponha a porta à rede. A versão não tem autenticação multiusuário, controle de acesso por cargo, alta disponibilidade, assinaturas de decisão ou validação jurídica. Portanto, não é apta a produção governamental real.
+
+## Documentação
+
+- `docs/ON_SERVER_MANUAL.md` — tutorial operacional.
+- `docs/ARCHITECTURE_0.3.md` — desenho de módulos, fluxos e limites.
+- `SECURITY.md` — modelo de ameaça e recomendações.
+- `docs/implementation_status.md` — matriz de maturidade.
+- `docs/RELEASE_NOTES.md` — mudanças da versão.
